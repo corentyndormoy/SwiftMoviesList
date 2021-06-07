@@ -1,0 +1,103 @@
+//
+//  CategoriesViewController.swift
+//  MovieListTP
+//
+//  Created by  on 31/05/2021.
+//  Copyright © 2021 Corentyn. All rights reserved.
+//
+
+import UIKit
+
+/**
+ Contrôle la page des catégories
+ */
+class CategoriesViewController: UIViewController  {
+
+    @IBOutlet weak var collectionView: UICollectionView!
+    
+    var categories: [Category] = []
+    
+    private let categoriesRepository = CategoriesRepository()
+    private let segueIdentifier = "showMoviesSegue"
+        
+    override func viewDidLoad() {
+        super.viewDidLoad()
+        collectionView.delegate = self
+        collectionView.dataSource = self
+        collectionView.register(CategoryCollectionViewCell.nib, forCellWithReuseIdentifier: CategoryCollectionViewCell.reuseIdentifier)
+        collectionView.register(TitleCollectionViewCell.nib, forCellWithReuseIdentifier: TitleCollectionViewCell.reuseIdentifier)
+
+        categoriesRepository.findAllCategories { response in
+            if let genres = response {
+                self.categories = genres.transformToCategoryArray()
+                DispatchQueue.main.async {
+                    self.collectionView.reloadData()
+                }
+            }
+        }
+    }
+    
+    override func prepare(for segue: UIStoryboardSegue, sender: Any?) {
+        if segue.identifier == segueIdentifier {
+            let listViewController = segue.destination as! ListViewController
+            if let category = sender as? Category {
+                listViewController.category = category
+            }
+        }
+    }
+
+}
+
+
+extension CategoriesViewController: UICollectionViewDelegate {
+    func collectionView(_ collectionView: UICollectionView, didSelectItemAt indexPath: IndexPath) {
+        if indexPath.section == 1 {
+            let cell = collectionView.cellForItem(at: indexPath) as! CategoryCollectionViewCell
+            cell.alpha = 0.5
+            UIView.animate(
+                withDuration: 0.2,
+                delay: 0.1,
+                animations: {
+                    cell.alpha = 1
+            })
+            self.performSegue(withIdentifier: segueIdentifier, sender: categories[indexPath.item])
+        }
+    }
+}
+
+extension CategoriesViewController: UICollectionViewDataSource {
+
+    func collectionView(_ collectionView: UICollectionView, numberOfItemsInSection section: Int) -> Int {
+        switch section {
+            case 0: return 1
+            case 1: return categories.count
+            default: return 0
+        }
+    }
+    
+    func numberOfSections(in collectionView: UICollectionView) -> Int {
+        return 2
+    }
+
+    
+    func collectionView(_ collectionView: UICollectionView, cellForItemAt indexPath: IndexPath) -> UICollectionViewCell {
+        if indexPath.section == 0 {
+            return collectionView.dequeueReusableCell(withReuseIdentifier: TitleCollectionViewCell.reuseIdentifier, for: indexPath as IndexPath) as! TitleCollectionViewCell
+        } else {
+            let cell = collectionView.dequeueReusableCell(withReuseIdentifier: CategoryCollectionViewCell.reuseIdentifier, for: indexPath as IndexPath) as! CategoryCollectionViewCell
+            cell.configureWithName(name: categories[indexPath.item].name)
+            return cell
+        }
+    }
+}
+
+extension CategoriesViewController: UICollectionViewDelegateFlowLayout {
+    func collectionView(_ collectionView: UICollectionView, layout collectionViewLayout: UICollectionViewLayout, sizeForItemAt indexPath: IndexPath) -> CGSize {
+        let padding: CGFloat =  50
+        let collectionViewSize = collectionView.frame.size.width - padding
+        if indexPath.section == 1 {
+            return CGSize(width: collectionViewSize, height: collectionViewSize/4)
+        }
+        return CGSize(width: collectionViewSize, height: collectionViewSize/4)
+    }
+}
